@@ -20,7 +20,7 @@ breaks <- grep("^\\*\\*\\*$", speeches)
 ### that have the date of the speech.  
 ### Place these dates in a character vector called tempDates.
 tempDates <- speeches[breaks+4]
-	
+
 ### Use regexpr to identify the location of the year in 
 ### each tempDates. Then use substr() to extract the year 
 ### Convert the year to numeric. Call it speechYr
