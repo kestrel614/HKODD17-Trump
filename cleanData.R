@@ -30,54 +30,62 @@ save(file = "tweets.RData", list = ls())
 
 
 
-
-
 #### Create word count matrix
 load("tweets.RData")
 
 library(stringr)
+library(qdapRegex)
 # R CMD INSTALL SnowballC_0.5.1.tar.gz
-# library(SnowballC)
+library(SnowballC)
 
 cleanTweets <- function(x) {
+	
+	incompletes <- x[grep("\\(cont\\)", x)] # 446
+	x <- x[! 1:length(x) %in% grep("\\(cont\\)", x)]
+
+	# Extract URLs and hashtags
+	rm_twitter_n_url <- rm_(pattern=pastex("@rm_twitter_url", "@rm_url"))
+	urls <- rm_twitter_n_url(x, extract=TRUE)	
+	hashtags <- rm_hash(x, extract=TRUE)
+	hashtagsU <- unlist(hashtags)
+	hashtagsU <- hashtagsU[!is.na(hashtagsU)]
+	
+	x <- rm_twitter_n_url(x)
+	x <- rm_hash(x)
+	
 	cleaned <- paste(x, collapse = " ")
 	
 	cleaned <- gsub("'", '', cleaned)
 	cleaned <- gsub("\"", '', cleaned)
 	cleaned <- gsub("\\s+", " ", str_trim(cleaned))
-	
-	# Extract URLs
-	urls <- unlist(str_extract_all(cleaned, "http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"))
-	urls2 <- unlist(str_extract_all(cleaned, "www(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"))
-	urls <- c(urls, urls2) ## Some broken URLs
-	cleaned <- gsub("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", '', cleaned)
-	cleaned <- gsub("www(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", '', cleaned)
-	
+		
 	cleaned <- tolower(cleaned)
 	
+	# By donald j. trump
 	cleaned <- gsub("--donald j. trump", "bydjtrump", cleaned)
 	cleaned <- gsub("–donald j. trump", "bydjtrump", cleaned)
 	cleaned <- gsub("– donald trump", "bydjtrump", cleaned)
-	#by donald j. trump
+	
+	# Remove possessives ('s)
+	cleaned <- gsub("'s", "", cleaned)
 		
 	# Extract @-ed accounts
-	referred <- unlist(str_extract_all(cleaned, "@(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"))
-	cleaned <- gsub("@(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", '', cleaned)
-	referred <- gsub("[[:punct:]]", "", referred)
+	referred <- unlist(str_extract_all(cleaned, "(^|[^@\\w])@(\\w{1,15})\\b"))
+	referred <- gsub("[^[:alnum:]@_]", "", referred)
+	cleaned <- gsub("(^|[^@\\w])@(\\w{1,15})\\b", "", cleaned)
 	# table(referred)[table(referred) > 10]
+		
+	cleaned <- gsub("&amp;", "and", cleaned)
+	cleaned <- gsub("–donald j. trump", "bydjtrump", cleaned)
 	
-	# Extract hashtags
-	hashtags <- unlist(str_extract_all(cleaned, "#(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"))
-	cleaned <- gsub("#(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", '', cleaned)
-	# table(referred)[table(referred) > 10]
-	
-	cleaned <- gsub("[[:punct:]]", "", cleaned)
+	cleaned <- gsub("[[:punct:]]", " ", cleaned)
+	cleaned <- gsub("\\s+", " ", str_trim(cleaned))
+	cleaned <- rm_number(cleaned)
 	
 	cleaned <- gsub("donald trump", "donaldtrump", cleaned)
 	cleaned <- gsub("donald j trump", "donaldtrump", cleaned)
 	
 	cleaned <- gsub("\\s+", " ", str_trim(cleaned))
-	
 	
 	###### Into words
 	cleanedV <- unlist(strsplit(cleaned, " "))
@@ -86,139 +94,22 @@ cleanTweets <- function(x) {
 	
 	# Use wordStem() to stem the words
 	# return a character vector of all words in the speech
-	# cleanedVStems <- wordStem(cleanedV)	
+	cleanedVStems <- wordStem(cleanedV)	
 	
-	return(list(urls = urls, referred = referred, hashtags = hashtags, cleaned = cleaned, cleanedV = cleanedV))
+	return(list(incompletes = incompletes, urls = urls, referred = referred, hashtags = hashtags, hashtagsU = hashtagsU, cleaned = cleaned, cleanedV = cleanedV, cleanedVStems = cleanedVStems))
 }
 
 trumpTweetsV <- cleanTweets(trumpTweets$text)
 ivankaTweetsV <- cleanTweets(ivankaTweets$text)
 
-# which(table(trumpTweetsV$hashtags) == max(table(trumpTweetsV$hashtags)))
-# #trump2016
-#       1543
+# > names(trumpTweetsV)
+# [1] "incompletes"   "urls"          "referred"      "hashtags"
+# [5] "hashtagsU"     "cleaned"       "cleanedV"      "cleanedVStems"
 
-# sort(table(trumpTweetsV$hashtags))
+# sort(table(trumpTweetsV$hashtagsU))
 
 # write.table(table(trumpTweetsV$cleanedV)[table(trumpTweetsV$cleanedV) > 500], file = "trumpWordCountsGT500.txt", sep = ":", row.names = FALSE, col.names = FALSE, quote = FALSE)
 # write.table(table(ivankaTweetsV$cleanedV), file = "ivankaWordCounts.txt", sep = "\t", row.names = FALSE, quote = FALSE)
 # write.table(trumpTweetsV$cleanedV, file = "trumpTweets.txt", sep = "\n", row.names = FALSE, col.names = FALSE, quote = FALSE)
 
-save(file = "tweets2.RData", list = ls())
-
-
-
-
-### For Yue's visualization
-
-forYue <- data.frame(user = character(0), year = integer(0), chinaWEB = integer(0), chinaAND = integer(0), chinaIOS = integer(0), usWEB = integer(0), usAND = integer(0), usIOS = integer(0), rusWEB = integer(0), rusAND = integer(0), rusIOS = integer(0), totWEB = integer(0), totAND = integer(0), totIOS = integer(0), stringsAsFactors=FALSE)
-
-findWordCount <- function(vec = vec, word = word) {
-	if (word %in% names(vec)) {
-		return(as.integer(vec[word]))
-	} else {
-		return(0)
-	}
-}
-
-for (i in 1:6) {
-	
-	year <- i + 2011
-	trumpTweetsWEB <- trumpTweets$text[trumpTweets$year == year & trumpTweets$source == "Twitter Web Client"]
-	trumpTweetsAND <- trumpTweets$text[trumpTweets$year == year & trumpTweets$source == "Twitter for Android"]
-	trumpTweetsIOS <- trumpTweets$text[trumpTweets$year == year & (trumpTweets$source == "Twitter for iPhone" | trumpTweets$source == "Twitter for iPad")]
-	
-	if (length(trumpTweetsWEB) != 0) {
-		tmp <- table(cleanTweets(trumpTweetsWEB)$cleanedV)
-		totWEB <- sum(tmp)
-		chinaWEB <- findWordCount(vec = tmp, word = "china") + findWordCount(vec = tmp, word = "chinas") + findWordCount(vec = tmp, word = "chinese")
-		usWEB <- findWordCount(vec = tmp, word = "usas") + findWordCount(vec = tmp, word = "usa") + findWordCount(vec = tmp, word = "america") + findWordCount(vec = tmp, word = "american") + findWordCount(vec = tmp, word = "americas") + findWordCount(vec = tmp, word = "americans")
-		rusWEB <- findWordCount(vec = tmp, word = "russia") + findWordCount(vec = tmp, word = "russian") + findWordCount(vec = tmp, word = "russians") + findWordCount(vec = tmp, word = "russias")
-	} else {
-		totWEB <- 0
-		chinaWEB <- 0
-		usWEB <- 0
-		rusWEB <- 0
-	}
-	
-	if (length(trumpTweetsAND) != 0) {
-		tmp <- table(cleanTweets(trumpTweetsAND)$cleanedV)
-		totAND <- sum(tmp)
-		chinaAND <- findWordCount(vec = tmp, word = "china") + findWordCount(vec = tmp, word = "chinas") + findWordCount(vec = tmp, word = "chinese")
-		usAND <- findWordCount(vec = tmp, word = "usas") + findWordCount(vec = tmp, word = "usa") + findWordCount(vec = tmp, word = "america") + findWordCount(vec = tmp, word = "american") + findWordCount(vec = tmp, word = "americas") + findWordCount(vec = tmp, word = "americans")
-		rusAND <- findWordCount(vec = tmp, word = "russia") + findWordCount(vec = tmp, word = "russian") + findWordCount(vec = tmp, word = "russians") + findWordCount(vec = tmp, word = "russias")
-	} else {
-		totAND <- 0
-		chinaAND <- 0
-		usAND <- 0
-		rusAND <- 0
-	}
-	
-	if (length(trumpTweetsIOS) != 0) {
-		tmp <- table(cleanTweets(trumpTweetsIOS)$cleanedV)
-		totIOS <- sum(tmp)
-		chinaIOS <- findWordCount(vec = tmp, word = "china") + findWordCount(vec = tmp, word = "chinas") + findWordCount(vec = tmp, word = "chinese")
-		usIOS <- findWordCount(vec = tmp, word = "usas") + findWordCount(vec = tmp, word = "usa") + findWordCount(vec = tmp, word = "america") + findWordCount(vec = tmp, word = "american") + findWordCount(vec = tmp, word = "americas") + findWordCount(vec = tmp, word = "americans")
-		rusIOS <- findWordCount(vec = tmp, word = "russia") + findWordCount(vec = tmp, word = "russian") + findWordCount(vec = tmp, word = "russians") + findWordCount(vec = tmp, word = "russias")
-	} else {
-		totIOS <- 0
-		chinaIOS <- 0
-		usIOS <- 0
-		rusIOS <- 0
-	}
-	
-	forYue <- rbind(forYue, data.frame(user = "donald", year = year, chinaWEB = chinaWEB, chinaAND = chinaAND, chinaIOS = chinaIOS, usWEB = usWEB, usAND = usAND, usIOS = usIOS, rusWEB = rusWEB, rusAND = rusAND, rusIOS = rusIOS, totWEB = totWEB, totAND = totAND, totIOS = totIOS, stringsAsFactors=FALSE))
-	
-}
-
-for (i in 7:12) {
-	
-	year <- i - 6 + 2011
-	ivankaTweetsWEB <- ivankaTweets$text[ivankaTweets$year == year & ivankaTweets$source == "Twitter Web Client"]
-	ivankaTweetsAND <- ivankaTweets$text[ivankaTweets$year == year & ivankaTweets$source == "Twitter for Android"]
-	ivankaTweetsIOS <- ivankaTweets$text[ivankaTweets$year == year & (ivankaTweets$source == "Twitter for iPhone" | ivankaTweets$source == "Twitter for iPad")]
-	
-	if (length(ivankaTweetsWEB) != 0) {
-		tmp <- table(cleanTweets(ivankaTweetsWEB)$cleanedV)
-		totWEB <- sum(tmp)
-		chinaWEB <- findWordCount(vec = tmp, word = "china") + findWordCount(vec = tmp, word = "chinas") + findWordCount(vec = tmp, word = "chinese")
-		usWEB <- findWordCount(vec = tmp, word = "usas") + findWordCount(vec = tmp, word = "usa") + findWordCount(vec = tmp, word = "america") + findWordCount(vec = tmp, word = "american") + findWordCount(vec = tmp, word = "americas") + findWordCount(vec = tmp, word = "americans")
-		rusWEB <- findWordCount(vec = tmp, word = "russia") + findWordCount(vec = tmp, word = "russian") + findWordCount(vec = tmp, word = "russians") + findWordCount(vec = tmp, word = "russias")
-	} else {
-		totWEB <- 0
-		chinaWEB <- 0
-		usWEB <- 0
-		rusWEB <- 0
-	}
-	
-	if (length(ivankaTweetsAND) != 0) {
-		tmp <- table(cleanTweets(ivankaTweetsAND)$cleanedV)
-		totAND <- sum(tmp)
-		chinaAND <- findWordCount(vec = tmp, word = "china") + findWordCount(vec = tmp, word = "chinas") + findWordCount(vec = tmp, word = "chinese")
-		usAND <- findWordCount(vec = tmp, word = "usas") + findWordCount(vec = tmp, word = "usa") + findWordCount(vec = tmp, word = "america") + findWordCount(vec = tmp, word = "american") + findWordCount(vec = tmp, word = "americas") + findWordCount(vec = tmp, word = "americans")
-		rusAND <- findWordCount(vec = tmp, word = "russia") + findWordCount(vec = tmp, word = "russian") + findWordCount(vec = tmp, word = "russians") + findWordCount(vec = tmp, word = "russias")
-	} else {
-		totAND <- 0
-		chinaAND <- 0
-		usAND <- 0
-		rusAND <- 0
-	}
-	
-	if (length(ivankaTweetsIOS) != 0) {
-		tmp <- table(cleanTweets(ivankaTweetsIOS)$cleanedV)
-		totIOS <- sum(tmp)
-		chinaIOS <- findWordCount(vec = tmp, word = "china") + findWordCount(vec = tmp, word = "chinas") + findWordCount(vec = tmp, word = "chinese")
-		usIOS <- findWordCount(vec = tmp, word = "usas") + findWordCount(vec = tmp, word = "usa") + findWordCount(vec = tmp, word = "america") + findWordCount(vec = tmp, word = "american") + findWordCount(vec = tmp, word = "americas") + findWordCount(vec = tmp, word = "americans")
-		rusIOS <- findWordCount(vec = tmp, word = "russia") + findWordCount(vec = tmp, word = "russian") + findWordCount(vec = tmp, word = "russians") + findWordCount(vec = tmp, word = "russias")
-	} else {
-		totIOS <- 0
-		chinaIOS <- 0
-		usIOS <- 0
-		rusIOS <- 0
-	}
-	
-	forYue <- rbind(forYue, data.frame(user = "ivanka", year = year, chinaWEB = chinaWEB, chinaAND = chinaAND, chinaIOS = chinaIOS, usWEB = usWEB, usAND = usAND, usIOS = usIOS, rusWEB = rusWEB, rusAND = rusAND, rusIOS = rusIOS, totWEB = totWEB, totAND = totAND, totIOS = totIOS, stringsAsFactors=FALSE))
-	
-}
-
-write.table(forYue, file = "forYue.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+save(file = "tweets2.RData", list = c("cleanTweets", "trumpTweetsV", "ivankaTweetsV"))
