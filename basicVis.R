@@ -225,10 +225,22 @@ save(file = "tweets-basicVis.RData", list = c("allTweets", "cleanedAllTweets", "
 
 
 
-load("tweets-basicVis.RData")
 
 ####### Run all the visualizations again and save to TrumpBasicVis.pdf
 ### Duplicated codes!!!
+
+load("tweets-basicVis.RData")
+# library(lubridate)
+# library(ggplot2)
+# library(dplyr)
+# library(readr)
+# library(stringr)
+# library(tidytext)
+# library(qdapRegex)
+# library(tidyr)
+# library(scales)
+# library(purrr)
+# library(broom)
 
 pdf("TrumpBasicVis.pdf", width = 10)
 

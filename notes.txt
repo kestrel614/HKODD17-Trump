@@ -1,0 +1,24 @@
+##### Notes from Yiming Li
+
+##### The repo: https://github.com/kestrel614/HKODD17-Trump
+
+
+
+
+
+### R scripts dependency
+### Currently a bit messed up. Would clean this later.
+
+cleanData.R (requires the two csv files; creates tweets.RData and tweets2.RData) -> wordCloud.R (requires tweets2.RData; creates tweets3.RData, trumpcloud.pdf and ivankacloud.pdf)
+
+basicVis.R (requires the two csv files; creates tweets-basicVis.RData and TrumpBasicVis.pdf) -> sentAnalysis.R (not yet implemented; possibly requires tweets-basicVis.RData)
+
+
+
+
+
+### For the write-up
+
+Mainly basicVis.R and TrumpBasicVis.pdf. The pdf file contains the graphs, whereas the last several lines of basicVis.R contains some description of the visualization.
+
+For the old results presented in the hackathon, please c.f. cleanData.R and the two word cloud PDFs.
