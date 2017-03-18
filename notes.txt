@@ -13,3 +13,7 @@ basicVis.R (requires the two csv files; creates tweets-basicVis.RData and TrumpB
 Mainly basicVis.R and TrumpBasicVis.pdf. The pdf file contains the graphs, whereas the last several lines of basicVis.R contains some description of the visualization.
 
 For the old results presented in the hackathon, please c.f. cleanData.R and the two word cloud PDFs.
+
+c.f.
+http://initiumlab.com/blog/20160704-trump-hillary-language/
+http://initiumlab.com/blog/20160622-orlando-gunshot/
